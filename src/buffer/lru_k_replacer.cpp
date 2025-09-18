@@ -54,7 +54,24 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
  * @param access_type type of access that was received. This parameter is only needed for
  * leaderboard tests.
  */
-void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {}
+void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType access_type) {
+
+    size_t _f = (size_t)frame_id ? frame_id > 0 : 0;
+    if (_f > replacer_size_) {
+        throw Exception("BUSTUB_ASSERT");
+    }
+
+    if ((bool)node_store_.count(frame_id)) {
+        LRUKNode node = node_store_[frame_id];
+        node_store_[frame_id].history_.insert(node.history_.end(), current_timestamp_);
+    }
+    else {
+        LRUKNode node = LRUKNode(frame_id, k_);
+        
+        node.history_.insert(node.history_.end(), current_timestamp_);
+        node_store_.insert({frame_id, node});
+    }
+}
 
 /**
  * TODO(P1): Add implementation
@@ -73,7 +90,28 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
  * @param frame_id id of frame whose 'evictable' status will be modified
  * @param set_evictable whether the given frame is evictable or not
  */
-void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {}
+void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
+
+    size_t _f = (size_t)frame_id ? frame_id > 0 : 0;
+    if (_f > replacer_size_) {
+        throw Exception("BUSTUB_ASSERT");
+    }
+
+    if ((bool)node_store_.count(frame_id)) {
+        LRUKNode node = node_store_[frame_id];
+        bool previous_evictability = node.is_evictable_;
+
+        // decrement size
+        if (previous_evictability && !set_evictable) { 
+            replacer_size_ -= 1;
+        }
+        else if (!previous_evictability && set_evictable) {
+            replacer_size_ += 1;
+        }
+
+        node.is_evictable_ = set_evictable;
+    }
+}
 
 /**
  * TODO(P1): Add implementation
