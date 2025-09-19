@@ -39,7 +39,58 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
  *
  * @return the frame ID if a frame is successfully evicted, or `std::nullopt` if no frames can be evicted.
  */
-auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { return std::nullopt; }
+auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { 
+    frame_id_t lowest_frame_id = 0;
+    size_t oldest_timestamp = std::numeric_limits<size_t>::infinity();
+    bool inf_flag = false;
+
+    for (auto it = node_store_.begin(); it != node_store_.end(); ++it) {
+        LRUKNode node = it->second;
+
+        size_t node_oldest = node.history_.front();
+
+        if (!node.is_evictable_) { continue; }
+
+        if (node.history_.size() < k_) {
+            if (inf_flag) {
+                if (node_oldest < oldest_timestamp) {
+                    lowest_frame_id = node.fid_;
+                    oldest_timestamp = node_oldest;
+                }
+            }
+            else {
+                inf_flag = true;
+                lowest_frame_id = node.fid_;
+                oldest_timestamp = node_oldest;
+            }
+        }
+        else {
+            if (inf_flag) { continue; }
+            
+            if (node_oldest < oldest_timestamp) {
+                lowest_frame_id = node.fid_;
+                oldest_timestamp = node_oldest;
+            }
+        }
+    }
+
+    // history < k => inf
+    // 
+
+    // oldest-timestamp: 7:00pm
+    // oldest-inf-node: D
+    // A - inf
+    // B - 2
+    // F - 2
+    // C - 6
+    // D - inf
+
+    if (lowest_frame_id == 0) { return std::nullopt; }
+    else { 
+        node_store_.erase(lowest_frame_id);
+        return lowest_frame_id;
+    }
+}
 
 /**
  * TODO(P1): Add implementation
@@ -101,12 +152,11 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
         LRUKNode node = node_store_[frame_id];
         bool previous_evictability = node.is_evictable_;
 
-        // decrement size
-        if (previous_evictability && !set_evictable) { 
-            replacer_size_ -= 1;
+        if (previous_evictability == true && set_evictable == false) { // decrement size
+            curr_size_ -= 1;
         }
-        else if (!previous_evictability && set_evictable) {
-            replacer_size_ += 1;
+        else if (previous_evictability == false && set_evictable == true) { // increment size
+            curr_size_ += 1;
         }
 
         node.is_evictable_ = set_evictable;
@@ -139,6 +189,6 @@ void LRUKReplacer::Remove(frame_id_t frame_id) {}
  *
  * @return size_t
  */
-auto LRUKReplacer::Size() -> size_t { return 0; }
+auto LRUKReplacer::Size() -> size_t { return curr_size_; }
 
 }  // namespace bustub
