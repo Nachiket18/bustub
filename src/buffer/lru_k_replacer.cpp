@@ -41,32 +41,59 @@ LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_fra
  */
 auto LRUKReplacer::Evict() -> std::optional<frame_id_t> { 
     frame_id_t lowest_frame_id = 0;
-    size_t oldest_timestamp = std::numeric_limits<size_t>::infinity();
+    size_t oldest_timestamp = 10000;
     bool inf_flag = false;
 
     for (auto it = node_store_.begin(); it != node_store_.end(); ++it) {
         LRUKNode node = it->second;
+        if (node.history_.size() < k_) {
+            inf_flag = true;
+        }
+        
+    }
 
-        size_t node_oldest = node.history_.front();
+    std::cout << std::endl;
+    for (auto it = node_store_.begin(); it != node_store_.end(); ++it) {
+        LRUKNode node = it->second;
 
-        if (!node.is_evictable_) { continue; }
+        size_t node_oldest; 
+        
+        // [1,2,3,4]
+
+        size_t leng = node.history_.size(); 
+        if (leng > k_) {
+            std::list<size_t>::iterator it_advance = node.history_.begin();
+            std::advance(it_advance, leng-k_);
+            node_oldest = *it_advance;
+        }
+        else {
+            node_oldest = node.history_.front();
+        }
+        
+        
+        
+        
+        // std::cout << "Node: " << node.fid_ << std::endl;
+        // std::cout << "Node Backward Distance: " << node.history_.front() << std::endl;
+        // std::cout << "Node Backward size : " << node.history_.size() << std::endl;
+
+        if (node.is_evictable_ == 0) { 
+            continue; 
+        }
 
         if (node.history_.size() < k_) {
-            if (inf_flag) {
-                if (node_oldest < oldest_timestamp) {
-                    lowest_frame_id = node.fid_;
-                    oldest_timestamp = node_oldest;
-                }
-            }
-            else {
-                inf_flag = true;
+            
+            if (node_oldest < oldest_timestamp) {
                 lowest_frame_id = node.fid_;
                 oldest_timestamp = node_oldest;
             }
+            
         }
         else {
-            if (inf_flag) { continue; }
-            
+            if (inf_flag == true) { 
+                continue; 
+            }
+
             if (node_oldest < oldest_timestamp) {
                 lowest_frame_id = node.fid_;
                 oldest_timestamp = node_oldest;
@@ -84,9 +111,11 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
     // F - 2
     // C - 6
     // D - inf
+    
 
-    if (lowest_frame_id == 0) { return std::nullopt; }
-    else { 
+    if (lowest_frame_id == std::numeric_limits<size_t>::infinity()) { return std::nullopt; }
+    else {
+        curr_size_ -= 1; 
         node_store_.erase(lowest_frame_id);
         return lowest_frame_id;
     }
@@ -112,9 +141,13 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
         throw Exception("BUSTUB_ASSERT");
     }
 
+    
+
     if ((bool)node_store_.count(frame_id)) {
         LRUKNode node = node_store_[frame_id];
-        node_store_[frame_id].history_.insert(node.history_.end(), current_timestamp_);
+        node.history_.insert(node.history_.end(), current_timestamp_);
+        node_store_[frame_id] = node;
+        
     }
     else {
         LRUKNode node = LRUKNode(frame_id, k_);
@@ -122,6 +155,7 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
         node.history_.insert(node.history_.end(), current_timestamp_);
         node_store_.insert({frame_id, node});
     }
+    this -> current_timestamp_ += 1;
 }
 
 /**
@@ -160,6 +194,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
         }
 
         node.is_evictable_ = set_evictable;
+        node_store_[frame_id] = node;
     }
 }
 
