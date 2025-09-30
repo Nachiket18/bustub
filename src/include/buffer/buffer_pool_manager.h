@@ -63,9 +63,10 @@ class FrameHeader {
 
  public:
   explicit FrameHeader(frame_id_t frame_id);
+  auto GetData() const -> const char *;
 
  private:
-  auto GetData() const -> const char *;
+  
   auto GetDataMut() -> char *;
   void Reset();
 

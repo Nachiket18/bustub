@@ -17,6 +17,8 @@
 namespace bustub {
 
 DiskScheduler::DiskScheduler(DiskManager *disk_manager) : disk_manager_(disk_manager) {
+  this->disk_manager_ = disk_manager;
+
   // TODO(P1): remove this line after you have implemented the disk scheduler API
   throw NotImplementedException(
       "DiskScheduler is not implemented yet. If you have finished implementing the disk scheduler, please remove the "
@@ -41,7 +43,9 @@ DiskScheduler::~DiskScheduler() {
  *
  * @param r The request to be scheduled.
  */
-void DiskScheduler::Schedule(DiskRequest r) {}
+void DiskScheduler::Schedule(DiskRequest r) {
+  
+}
 
 /**
  * TODO(P1): Add implementation
