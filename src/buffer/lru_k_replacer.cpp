@@ -112,7 +112,7 @@ auto LRUKReplacer::Evict() -> std::optional<frame_id_t> {
     // C - 6
     // D - inf
     
-
+    std::lock_guard<std::mutex> lock(mtx);
     if (lowest_frame_id == std::numeric_limits<size_t>::infinity()) { return std::nullopt; }
     else {
         curr_size_ -= 1; 
@@ -142,19 +142,22 @@ void LRUKReplacer::RecordAccess(frame_id_t frame_id, [[maybe_unused]] AccessType
     }
 
     
-
+    std::lock_guard<std::mutex> lock(mtx);
     if ((bool)node_store_.count(frame_id)) {
+        
         LRUKNode node = node_store_[frame_id];
         node.history_.insert(node.history_.end(), current_timestamp_);
         node_store_[frame_id] = node;
         
     }
     else {
+        
         LRUKNode node = LRUKNode(frame_id, k_);
         
         node.history_.insert(node.history_.end(), current_timestamp_);
         node_store_.insert({frame_id, node});
     }
+
     this -> current_timestamp_ += 1;
 }
 
@@ -182,6 +185,7 @@ void LRUKReplacer::SetEvictable(frame_id_t frame_id, bool set_evictable) {
         throw Exception("BUSTUB_ASSERT");
     }
 
+    std::lock_guard<std::mutex> lock(mtx);
     if ((bool)node_store_.count(frame_id)) {
         LRUKNode node = node_store_[frame_id];
         bool previous_evictability = node.is_evictable_;

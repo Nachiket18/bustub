@@ -85,7 +85,7 @@ class LRUKReplacer {
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
   std::unordered_map<frame_id_t, LRUKNode> node_store_;
-
+  std::mutex mtx;
   size_t current_timestamp_{0};
   size_t curr_size_{0};
   size_t replacer_size_;
