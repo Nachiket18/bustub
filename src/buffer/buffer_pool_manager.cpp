@@ -119,7 +119,7 @@ auto BufferPoolManager::Size() const -> size_t { return num_frames_; }
 auto BufferPoolManager::NewPage() -> page_id_t { 
   
   page_id_t new_id = next_page_id_.fetch_add(1);
-  disk_scheduler_->disk_manager_->WritePage(new_id, nullptr);
+  disk_scheduler_->Schedule(DiskRequest{false, nullptr, new_id, std::promise<bool>()});
 
   return new_id;
 }

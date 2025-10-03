@@ -54,9 +54,6 @@ class DiskScheduler {
   explicit DiskScheduler(DiskManager *disk_manager);
   ~DiskScheduler();
 
-  /** Pointer to the disk manager. */
-  DiskManager *disk_manager_ __attribute__((__unused__));
-
   void Schedule(DiskRequest r);
 
   void StartWorkerThread();
@@ -81,6 +78,9 @@ class DiskScheduler {
   void DeallocatePage(page_id_t page_id) { disk_manager_->DeletePage(page_id); }
 
  private:
+
+   /** Pointer to the disk manager. */
+   DiskManager *disk_manager_ __attribute__((__unused__));
 
   /** A shared queue to concurrently schedule and process requests. When the DiskScheduler's destructor is called,
    * `std::nullopt` is put into the queue to signal to the background thread to stop execution. */
