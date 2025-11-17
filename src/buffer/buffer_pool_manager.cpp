@@ -46,6 +46,16 @@ void FrameHeader::Reset() {
   is_dirty_ = false;
 }
 
+// Acquire the exclusive (write) lock
+void FrameHeader::WLatch() {
+    rwlatch_.lock();
+}
+
+// Release the exclusive (write) lock
+void FrameHeader::WUnlatch() {
+    rwlatch_.unlock();
+}
+
 /**
  * @brief Creates a new `BufferPoolManager` instance and initializes all fields.
  *
@@ -185,7 +195,31 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool { UNIMPLEMENTED("T
  * returns `std::nullopt`; otherwise, returns a `WritePageGuard` ensuring exclusive and mutable access to a page's data.
  */
 auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_type) -> std::optional<WritePageGuard> {
-  UNIMPLEMENTED("TODO(P1): Add implementation.");
+  
+  auto pg = page_table_.find(page_id);
+  if (pg != page_table_.end()) {
+         // Case 1: The data is already in the buffer
+        auto frame_id = pg ->first;
+        auto f_it = std::find(frames_.begin(), frames_.end(), frame_id);
+        if (f_it != frames_.end()) {
+          auto f_index = std::distance(frames_.begin(), f_it);
+          std::shared_ptr<bustub::FrameHeader> frame  = frames_[f_index];
+          std::unique_lock<std::mutex> bpm_guard(*bpm_latch_);
+
+          frame ->pin_count_ += 1;
+          replacer_ ->RecordAccess(frame_id);
+          replacer_ ->SetEvictable(frame_id,false);
+          bpm_guard.unlock();
+          
+          return WritePageGuard(page_id,frame,replacer_,bpm_latch_,disk_scheduler_);
+        
+        } 
+  }
+  else {
+
+  }
+
+
 }
 
 /**

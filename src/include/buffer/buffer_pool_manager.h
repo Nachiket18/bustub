@@ -64,6 +64,8 @@ class FrameHeader {
  public:
   explicit FrameHeader(frame_id_t frame_id);
   auto GetData() const -> const char *;
+  void FrameHeader::WLatch();
+  void FrameHeader::WUnlatch();
 
  private:
   
