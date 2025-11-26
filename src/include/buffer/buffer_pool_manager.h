@@ -66,6 +66,8 @@ class FrameHeader {
   auto GetData() const -> const char *;
   void FrameHeader::WLatch();
   void FrameHeader::WUnlatch();
+  void FrameHeader::RLatch();
+  void FrameHeader::RUnlatch(); 
 
  private:
   

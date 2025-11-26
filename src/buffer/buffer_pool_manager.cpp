@@ -56,6 +56,17 @@ void FrameHeader::WUnlatch() {
     rwlatch_.unlock();
 }
 
+// Acquire the exclusive (write) lock
+void FrameHeader::RLatch() {
+    rwlatch_.lock_shared();
+}
+
+// Release the exclusive (write) lock
+void FrameHeader::RUnlatch() {
+    rwlatch_.unlock_shared();
+}
+
+
 /**
  * @brief Creates a new `BufferPoolManager` instance and initializes all fields.
  *
@@ -199,26 +210,53 @@ auto BufferPoolManager::CheckedWritePage(page_id_t page_id, AccessType access_ty
   auto pg = page_table_.find(page_id);
   if (pg != page_table_.end()) {
          // Case 1: The data is already in the buffer
-        auto frame_id = pg ->first;
-        auto f_it = std::find(frames_.begin(), frames_.end(), frame_id);
-        if (f_it != frames_.end()) {
-          auto f_index = std::distance(frames_.begin(), f_it);
-          std::shared_ptr<bustub::FrameHeader> frame  = frames_[f_index];
-          std::unique_lock<std::mutex> bpm_guard(*bpm_latch_);
-
-          frame ->pin_count_ += 1;
-          replacer_ ->RecordAccess(frame_id);
-          replacer_ ->SetEvictable(frame_id,false);
-          bpm_guard.unlock();
-          
-          return WritePageGuard(page_id,frame,replacer_,bpm_latch_,disk_scheduler_);
+        auto frame_id = pg ->second; // getting the frame_id
         
-        } 
+        for (int i = 0; i < frames_.size(); i++) {
+          std::shared_ptr<bustub::FrameHeader> frame_ =  frames_[i];
+          if (frame_id == frame_ ->frame_id_) {
+            std::unique_lock<std::mutex> bpm_guard(*bpm_latch_);
+            frame_ ->pin_count_ += 1;
+            replacer_ ->RecordAccess(frame_id);
+            replacer_ ->SetEvictable(frame_id,false);
+            bpm_guard.unlock();
+            return WritePageGuard(page_id,frame_,replacer_,bpm_latch_,disk_scheduler_);
+          }
+        }
   }
+  // Case 2: The data is not in the buffer, but memory is available
+  else if (pg == page_table_.end() && free_frames_.empty() == false){
+    auto frame_id = this->free_frames_.front();
+    this -> free_frames_.pop_front();
+    
+    this ->page_table_.insert(page_id,frame_id);
+    
+    std::unique_lock<std::mutex> bpm_guard(*bpm_latch_);
+    auto new_frame_ = std::make_shared<FrameHeader>(bustub::FrameHeader(frame_id));
+    new_frame_ ->pin_count_ = 1;
+    new_frame_ ->is_dirty_ = false;    
+
+    std::promise<bool> promise;
+    std::future<bool> future = promise.get_future();
+    bustub::DiskRequest request;
+
+    request.is_write_ = false;
+    request.page_id_ = page_id;
+    request.data_ = new_frame_->GetDataMut();
+    request.callback_ = std::move(promise);
+
+    future.get();
+    
+    
+    
+    this -> frames_.push_back(std::move(new_frame_));
+  }
+  
+  // Case 3: The data is not in t;he buffer, and memory is NOT available
   else {
-
+    auto frame_id = replacer_->Evict();
+    
   }
-
 
 }
 
