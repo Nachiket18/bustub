@@ -92,6 +92,7 @@ class FrameHeader {
    * If the frame does not hold any page data, the frame contains all null bytes.
    */
   std::vector<char> data_;
+  page_id_t page_id;
 
   /**
    * TODO(P1): You may add any fields or helper functions under here that you think are necessary.
